@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Portfolio — Shree Londhe
 
-## Getting Started
+AI/ML engineer portfolio, framed as a live agent evaluation report: the page opens with a boot sequence, scores itself with the same confidence-meter language used in the actual RAG/eval projects it describes, and lets you click into any project for a flashcard (overview, stack, why it was built, challenges & lessons).
 
-First, run the development server:
+**Live:** https://portfolio-bice-nine-ekrh7ppg1i.vercel.app
+
+## Stack
+
+Next.js 16 (App Router) · TypeScript · Tailwind CSS · Framer Motion
+
+## Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+src/
+  app/            page.tsx, layout.tsx, globals.css
+  components/     BootSequence, AmbientBackground, Hero, QueryBar, ProjectCard,
+                  ProjectModal, IncidentLog, SkillCoverage, RunSummary, Footer, CountUp
+  hooks/          useInView, useReducedMotion
+  lib/            data.ts — project content, incidents, skills, run-summary numbers
+```
 
-## Learn More
+Project content lives in `src/lib/data.ts` — that's the file to edit when adding or updating a project.
 
-To learn more about Next.js, take a look at the following resources:
+## Deploy
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Connected to Vercel; pushes to `master` auto-deploy.
