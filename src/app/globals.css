@@ -61,7 +61,7 @@ button {
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 13px;
 }
 .topbar-inner {
   max-width: 1080px;
@@ -89,7 +89,7 @@ button {
   background: rgba(52, 211, 153, 0.12);
   border: 1px solid rgba(52, 211, 153, 0.35);
   color: var(--pass);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.03em;
 }
 .status-pill::before {
@@ -140,7 +140,7 @@ button {
 }
 .eyebrow {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--dim);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -149,7 +149,7 @@ button {
   color: var(--accent);
 }
 h1 {
-  font-size: clamp(30px, 4.6vw, 48px);
+  font-size: clamp(32px, 4.8vw, 50px);
   line-height: 1.08;
   margin: 14px 0 0;
   font-weight: 700;
@@ -166,8 +166,8 @@ h1 .role {
 }
 .lede {
   color: var(--muted);
-  font-size: 15.5px;
-  line-height: 1.7;
+  font-size: 17.5px;
+  line-height: 1.75;
   margin-top: 18px;
   max-width: 56ch;
 }
@@ -181,7 +181,7 @@ h1 .role {
   padding: 11px 20px;
   border-radius: 6px;
   text-decoration: none;
-  font: 600 13.5px/1 var(--sans);
+  font: 600 14.5px/1 var(--sans);
   letter-spacing: 0.01em;
   transition: transform 0.18s ease, filter 0.18s ease;
   display: inline-block;
@@ -220,14 +220,14 @@ h1 .role {
   margin-bottom: 16px;
 }
 .score-panel .head span {
-  font-size: 10.5px;
+  font-size: 11.5px;
   color: var(--dim);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
 .score-panel .head b {
   color: var(--pass);
-  font-size: 12px;
+  font-size: 13px;
 }
 .score-row {
   margin-bottom: 14px;
@@ -238,7 +238,7 @@ h1 .role {
 .score-row .lbl {
   display: flex;
   justify-content: space-between;
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--muted);
   margin-bottom: 6px;
 }
@@ -276,7 +276,7 @@ h1 .role {
 }
 .query-label {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--dim);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -291,7 +291,7 @@ h1 .role {
   border-radius: 8px;
   padding: 12px 16px;
   font-family: var(--mono);
-  font-size: 13.5px;
+  font-size: 14.5px;
   color: var(--muted);
 }
 .query-bar .prompt-mark {
@@ -325,7 +325,7 @@ h1 .role {
 }
 .chip {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--muted);
   border: 1px solid var(--border2);
   padding: 6px 12px;
@@ -351,14 +351,14 @@ h1 .role {
   font-family: var(--mono);
 }
 .section-title h2 {
-  font-size: 14px;
+  font-size: 15px;
   margin: 0;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text);
 }
 .section-title span {
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--dim);
 }
 .case-grid {
@@ -401,17 +401,17 @@ h1 .role {
 }
 .case-head .id {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--dim);
 }
 .case-head h3 {
   margin: 6px 0 0;
-  font-size: 16.5px;
+  font-size: 18.5px;
   font-weight: 600;
 }
 .verdict {
   font-family: var(--mono);
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 700;
   letter-spacing: 0.06em;
   padding: 4px 9px;
@@ -440,7 +440,7 @@ h1 .role {
 }
 .open-hint {
   font-family: var(--mono);
-  font-size: 10.5px;
+  font-size: 11.5px;
   color: var(--dim);
   margin-top: -6px;
 }
@@ -450,14 +450,14 @@ h1 .role {
 .case p.desc {
   margin: 0;
   color: var(--muted);
-  font-size: 13.5px;
-  line-height: 1.65;
+  font-size: 15.5px;
+  line-height: 1.7;
 }
 .case-meter .lbl {
   display: flex;
   justify-content: space-between;
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   margin-bottom: 5px;
 }
@@ -511,13 +511,13 @@ h1 .role {
 .case-stats div b {
   display: block;
   font-family: var(--mono);
-  font-size: 15px;
+  font-size: 16px;
   color: var(--text);
   font-variant-numeric: tabular-nums;
 }
 .case-stats div span {
   display: block;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--dim);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -527,7 +527,7 @@ h1 .role {
   display: flex;
   gap: 14px;
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 12.5px;
 }
 .case-links a,
 .case-links button {
@@ -573,13 +573,13 @@ h1 .role {
   padding: 16px;
   margin-top: 2px;
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 14px;
   color: var(--muted);
-  line-height: 1.7;
+  line-height: 1.75;
 }
 .trace-panel .trace-title {
   color: var(--text);
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin-bottom: 8px;
@@ -589,7 +589,7 @@ h1 .role {
   align-items: center;
   gap: 10px;
   margin: 10px 0;
-  font-size: 13px;
+  font-size: 14px;
 }
 .trace-diff .before {
   color: var(--warn);
@@ -609,7 +609,7 @@ h1 .role {
   display: flex;
   justify-content: space-between;
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   margin-bottom: 6px;
 }
@@ -632,7 +632,7 @@ h1 .role {
   flex-wrap: wrap;
   margin-top: 9px;
   font-family: var(--mono);
-  font-size: 10.5px;
+  font-size: 11.5px;
   color: var(--muted);
 }
 .latency-legend span {
@@ -679,12 +679,12 @@ h1 .role {
 }
 .modal-head .id {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--dim);
 }
 .modal-head h3 {
   margin: 6px 0 0;
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 700;
 }
 .modal-close {
@@ -714,7 +714,7 @@ h1 .role {
 }
 .modal-section .mlabel {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--accent);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -723,8 +723,8 @@ h1 .role {
 .modal-section p {
   margin: 0;
   color: var(--muted);
-  font-size: 13.5px;
-  line-height: 1.7;
+  font-size: 15.5px;
+  line-height: 1.75;
 }
 .modal-stack {
   display: flex;
@@ -733,7 +733,7 @@ h1 .role {
 }
 .modal-stack span {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--muted);
   border: 1px solid var(--border2);
   padding: 5px 11px;
@@ -745,7 +745,7 @@ h1 .role {
   padding: 18px 24px;
   border-top: 1px solid var(--border);
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 13px;
 }
 .modal-foot a {
   color: var(--muted);
@@ -786,24 +786,24 @@ h1 .role {
 .incident-id {
   font-family: var(--mono);
   color: var(--dim);
-  font-size: 11px;
+  font-size: 12px;
   padding-top: 2px;
 }
 .incident-body strong {
   color: var(--text);
-  font-size: 13.5px;
+  font-size: 15.5px;
 }
 .incident-body .src {
   color: var(--muted);
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
   margin-left: 8px;
 }
 .incident-body p {
   margin: 5px 0 0;
   color: var(--muted);
-  font-size: 12.5px;
-  line-height: 1.6;
+  font-size: 14.5px;
+  line-height: 1.65;
 }
 .incident-body p code {
   font-family: var(--mono);
@@ -811,11 +811,11 @@ h1 .role {
   background: var(--panel2);
   padding: 1px 5px;
   border-radius: 3px;
-  font-size: 11.5px;
+  font-size: 12.5px;
 }
 .incident-status {
   font-family: var(--mono);
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -851,7 +851,7 @@ h1 .role {
   gap: 18px;
   flex-wrap: wrap;
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   margin-bottom: 18px;
 }
@@ -894,7 +894,7 @@ h1 .role {
 }
 .coverage-name {
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text);
 }
 .coverage-name .pkg {
@@ -928,7 +928,7 @@ h1 .role {
 }
 .coverage-frac {
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -974,13 +974,13 @@ h1 .role {
 .summary-cell b {
   display: block;
   font-family: var(--mono);
-  font-size: 24px;
+  font-size: 26px;
   color: var(--accent);
   font-variant-numeric: tabular-nums;
 }
 .summary-cell span {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   margin-top: 5px;
 }
@@ -998,7 +998,7 @@ footer {
 }
 footer .log {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--dim);
   line-height: 1.9;
 }
@@ -1010,7 +1010,7 @@ footer .log b {
   gap: 14px;
 }
 .contact-links a {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
   text-decoration: none;
   padding: 8px 14px;
@@ -1040,7 +1040,7 @@ footer .log b {
   align-items: center;
   padding: 0 24px;
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
   transition: opacity 0.5s ease, visibility 0.5s ease;
 }
