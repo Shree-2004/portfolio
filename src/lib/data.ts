@@ -247,11 +247,14 @@ export const INCIDENTS = [
 
 export const SKILLS = [
   { pkg: "core.", name: "python_ml", count: 10, total: 12, tier: "core" as const },
+  { pkg: "ui.", name: "streamlit_gradio_demos", count: 7, total: 12, tier: "core" as const },
   { pkg: "frontend.", name: "react_typescript", count: 5, total: 12, tier: "core" as const },
   { pkg: "retrieval.", name: "rag_vector_search", count: 4, total: 12, tier: "applied" as const },
+  { pkg: "ml.", name: "pytorch_deep_learning", count: 3, total: 12, tier: "applied" as const },
   { pkg: "agents.", name: "multi_agent_orchestration", count: 3, total: 12, tier: "applied" as const },
   { pkg: "ops.", name: "docker_vercel_railway", count: 3, total: 12, tier: "applied" as const },
   { pkg: "training.", name: "qlora_fine_tuning", count: 1, total: 12, tier: "special" as const },
+  { pkg: "eval.", name: "adversarial_redteam", count: 1, total: 12, tier: "special" as const },
 ];
 
 export const RUN_SUMMARY = [
