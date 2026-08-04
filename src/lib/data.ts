@@ -175,6 +175,45 @@ export const PROJECTS: Project[] = [
     confidence: { label: "Keyword-coverage lift vs. base", tier: "High", value: 88.6 },
   },
   {
+    key: "self-healing-rag",
+    tcId: "TC-06",
+    tag: "retrieval / self-healing",
+    title: "Self-Healing RAG",
+    verdict: "build",
+    verdictLabel: "in progress",
+    desc: "A LangGraph query loop that grades its own retrieval quality and recovers from bad results — rewriting the query, then widening context — instead of answering from weak context, with a background job that re-chunks documents that keep grading low-relevance.",
+    stats: [
+      { value: "RRF", label: "dense + BM25 fusion" },
+      { value: "2", label: "recovery strategies" },
+      { value: "19/19", label: "tests passing" },
+    ],
+    links: [
+      { label: "source", href: "https://github.com/Shree-2004/Self-Healing-RAG" },
+    ],
+    overview:
+      "A retrieval-augmented generation system built around one idea: don't trust the first retrieval. A LangGraph state machine retrieves with hybrid dense+BM25 search fused via RRF and reranked with a cross-encoder, grades each passage's relevance, and — if nothing relevant came back — rewrites the query and widens the retrieval window before generating, verifying every answer against the passages that actually supported it. A background job watches which documents keep surfacing as low-relevance and automatically re-chunks them at a smaller size, no manual re-ingestion required.",
+    stack: [
+      "LangGraph state machine",
+      "Qdrant (embedded)",
+      "BM25 + RRF fusion",
+      "sentence-transformers embeddings",
+      "cross-encoder reranking",
+      "Ollama (local LLM)",
+      "FastAPI",
+      "pytest (offline fake providers)",
+    ],
+    why: "Most RAG demos assume the first retrieval is good enough and just generate from it. Wanted to build the failure-handling path explicitly — grade, retry, widen, verify, give up honestly — instead of quietly hallucinating past a bad retrieval.",
+    challenges:
+      "The offline test suite's fake relevance grader used Jaccard similarity, which got diluted on realistic multi-sentence chunks — a passage that clearly contained the answer was scoring as 'irrelevant' just because the chunk had more unrelated words than the query had matching ones. Switched to a query-coverage metric (what fraction of the query's own words appear in the passage) instead, which isn't sensitive to passage length. Also found the healing job would crash re-chunking to a smaller size than the configured overlap — caught both by actually running the system end-to-end against a live server instead of trusting the test suite alone.",
+    debugTrace: {
+      title: "// root cause: length-sensitive relevance grading",
+      body: "Jaccard similarity between query and passage words gets diluted as passage length grows — a passage's own unrelated vocabulary swamps the denominator even when it fully contains what the query asked about.",
+      before: "\"Qdrant\" query graded irrelevant against a passage that says \"Qdrant runs in embedded/local file mode\"",
+      after: "Same passage correctly graded partial/relevant using query-coverage instead of Jaccard",
+      note: "Caught by manually querying a live server, not by the test suite — the hand-crafted test fixtures were short enough to not expose the dilution bug.",
+    },
+  },
+  {
     key: "ai-news",
     tcId: "TC-05",
     tag: "dashboard / scheduled LLM",
