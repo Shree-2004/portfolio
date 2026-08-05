@@ -154,25 +154,23 @@ export const PROJECTS: Project[] = [
     tcId: "TC-04",
     tag: "fine-tuning / QLoRA",
     title: "Domain Fine-Tuned Finance LLM",
-    verdict: "bench",
-    verdictLabel: "benchmarked",
-    desc: "Mistral-7B-Instruct fine-tuned on Indian personal-finance data via 4-bit QLoRA, with a rank ablation study (r=8/16/32) tracked in MLflow.",
+    verdict: "build",
+    verdictLabel: "in progress",
+    desc: "Mistral-7B-Instruct fine-tuned on Indian personal-finance data via 4-bit QLoRA on a Colab T4 — training loss 1.72 → 0.68 over 3 epochs. Rank ablation, keyword-coverage benchmark, and HF Hub deployment are scaffolded but not yet run.",
     stats: [
       { value: "4×", label: "memory reduction" },
-      { value: "r=8/16/32", label: "rank ablation" },
-      { value: "HF Hub", label: "weights shipped" },
+      { value: "1.72 → 0.68", label: "training loss" },
+      { value: "r=16", label: "only rank trained so far" },
     ],
     links: [
       { label: "source", href: "https://github.com/Shree-2004/Finance-llm" },
-      { label: "gradio demo", href: "#" },
     ],
     overview:
       "Mistral-7B-Instruct fine-tuned on localized Indian personal-finance topics (SIPs, PPF, EPF, ELSS, HRA, ITR, CIBIL) so it reasons correctly about India-specific financial products a general model wouldn't know well.",
-    stack: ["Mistral-7B-Instruct", "QLoRA (4-bit NF4, bitsandbytes)", "PEFT/LoRA", "MLflow", "HuggingFace Hub", "Gradio"],
+    stack: ["Mistral-7B-Instruct", "QLoRA (4-bit NF4, bitsandbytes)", "PEFT/LoRA", "MLflow (wired, not yet populated)", "Gradio"],
     why: "Wanted to go through a full fine-tuning cycle end-to-end, not just call an API — including the memory-constrained reality of training a 7B model on consumer hardware.",
     challenges:
-      "Ran a systematic LoRA rank ablation (r=8/16/32) tracked in MLflow instead of guessing a rank — that's what got the +88.6% keyword-coverage improvement instead of a smaller gain from an undertuned adapter.",
-    confidence: { label: "Keyword-coverage lift vs. base", tier: "High", value: 88.6 },
+      "Built out a systematic 3-way LoRA rank ablation (r=8/16/32) with MLflow tracking and a 50-prompt keyword-coverage benchmark script — but only r=16 has actually been trained and graded so far (loss 1.72 → 0.68 on Colab's ephemeral filesystem, so MLflow has no logged runs yet either). Deliberately not quoting an ablation or benchmark number here until r=8, r=32, and the eval script have actually been run — a planned pipeline isn't a result.",
   },
   {
     key: "self-healing-rag",
