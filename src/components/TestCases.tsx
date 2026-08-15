@@ -2,7 +2,7 @@ import { PROJECTS } from "@/lib/data";
 import ProjectCard from "./ProjectCard";
 
 interface TestCasesProps {
-  onOpen: (key: string) => void;
+  onOpen: (key: string, stage?: number) => void;
 }
 
 export default function TestCases({ onOpen }: TestCasesProps) {

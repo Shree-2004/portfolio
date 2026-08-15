@@ -8,6 +8,10 @@ interface HeroProps {
 export default function Hero({ ready }: HeroProps) {
   return (
     <section className="hero">
+      <div className="hero-glow" aria-hidden="true">
+        <span className="glow g1" />
+        <span className="glow g2" />
+      </div>
       <div className="hero-grid">
         <div>
           <div className="eyebrow">

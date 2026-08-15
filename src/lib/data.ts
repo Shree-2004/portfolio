@@ -24,6 +24,12 @@ export interface DebugTrace {
   note: string;
 }
 
+export interface PipelineStage {
+  label: string;
+  status?: "flagged" | "active" | "planned";
+  detail: string;
+}
+
 export interface Project {
   key: string;
   tcId: string;
@@ -41,6 +47,7 @@ export interface Project {
   confidence?: { label: string; tier: string; value: number };
   latency?: { segments: LatencySegment[]; total: string };
   debugTrace?: DebugTrace;
+  pipeline?: PipelineStage[];
 }
 
 export const PROJECTS: Project[] = [
@@ -51,7 +58,7 @@ export const PROJECTS: Project[] = [
     title: "SEBI/BSE Filing RAG Analyzer",
     verdict: "bench",
     verdictLabel: "benchmarked",
-    desc: "Hybrid dense + BM25 retrieval over real Indian financial filings (Reliance, TCS, Infosys), with cross-encoder reranking and a post-generation grounding check that blocks ungrounded answers.",
+    desc: "Hybrid dense + BM25 retrieval over real Indian financial filings (Reliance, TCS, Infosys), with cross-encoder reranking and a post-generation grounding check that flags answers below a confidence threshold.",
     stats: [
       { value: "95.6%", label: "keyword acc." },
       { value: "3,637", label: "chunks (from 31.4k)" },
@@ -77,6 +84,29 @@ export const PROJECTS: Project[] = [
     challenges:
       "The chunker had a silent sliding-window bug generating near-duplicate chunks (31,477 total). Root-caused it to a step-size error, fixed it, and added a regression test pinning chunk counts per fixture page — a good lesson in never trusting chunk counts without eyeballing samples. Also flagged an unresolved production risk: the embedding model's ~510MB memory footprint exceeds a typical 512MB free-tier ceiling.",
     confidence: { label: "Grounding confidence", tier: "High", value: 91.1 },
+    pipeline: [
+      { label: "ocr parse", detail: "pdfplumber extracts native text and tables per page; Tesseract OCR only kicks in when a page has under 20 characters of extractable text." },
+      {
+        label: "chunk",
+        status: "flagged",
+        detail:
+          "Sliding-window bug found & fixed here — the window-advance loop degenerated into single-token increments near section ends, re-emitting near-duplicates. 31.4k → 3.6k chunks, with a regression test now pinning counts per fixture page.",
+      },
+      { label: "dense embed", detail: "BAAI/bge-base-en-v1.5 encodes each chunk into a normalized 768-dim vector, with a separate retrieval prefix applied to queries at search time." },
+      { label: "vector upsert", detail: "Embeddings and chunk metadata are batched into a Qdrant collection — the persisted dense index the retriever searches against." },
+      { label: "bm25 index", detail: "Chunk text is tokenized (keeping characters like . % / so \"Q2FY25\" and \"4.3%\" survive) and built into a pickled rank_bm25 index, independent of the vector store." },
+      { label: "dense search", detail: "Qdrant cosine search over the vector index returns the top semantic candidates for a query." },
+      { label: "bm25 search", detail: "A parallel keyword search over the BM25 index returns the top exact-match candidates — dense search alone missed exact numbers and table lookups." },
+      { label: "rrf fuse", detail: "Reciprocal rank fusion merges the two ranked lists by rank rather than raw score, since BM25 and cosine scores aren't on comparable scales." },
+      { label: "rerank", detail: "A cross-encoder (ms-marco-MiniLM-L-6-v2) re-scores the fused candidates jointly against the query for precision before anything reaches the LLM." },
+      { label: "generate", detail: "Groq's Llama-3.3-70B drafts a citation-instructed answer from the top chunks, falling back to gpt-4o-mini if Groq rate-limits or goes down." },
+      {
+        label: "ground-check",
+        detail:
+          "Regex-extracts every figure, term, and period from the answer and checks each against the retrieved chunks, attaching a confidence score — it flags weak grounding below a 0.5 threshold, it doesn't hard-block the answer.",
+      },
+      { label: "cite", detail: "A separate pass matches company + period mentions in the answer text back to source chunks to build the structured per-page citation list." },
+    ],
     debugTrace: {
       title: "// root cause: sliding-window chunker bug",
       body: "Loop condition let the window advance by less than one full step on certain page layouts, re-emitting near-duplicate chunks for the same source text.",
@@ -116,6 +146,23 @@ export const PROJECTS: Project[] = [
     challenges:
       "Calibrating the LLM-judge to agree with hand-labeled ground truth took real iteration (now 100% agreement on the labeled set). It also caught a bug in its own scorer — an exception during scoring was silently swallowed, discarding an entire run's results — a reminder that eval tooling needs its own tests too.",
     confidence: { label: "LLM-judge agreement", tier: "High", value: 100 },
+    pipeline: [
+      { label: "wrap agent", detail: "Any agent implements one Protocol (setup/run/teardown); real adapters run the target under its own venv via a subprocess JSON shim so incompatible dependency pins never collide." },
+      { label: "load cases", detail: "Versioned YAML test cases are loaded and tagged normal, edge-case, or adversarial prompt-injection." },
+      { label: "run suite", detail: "setup() runs once, then run() executes per case producing a normalized trace, with teardown() always firing via finally." },
+      {
+        label: "score traces",
+        status: "flagged",
+        detail:
+          "A swallowed exception here — a judge API rate-limit — used to crash the whole suite and discard every already-collected result; now caught per-scorer and encoded as a scorer error instead of propagating.",
+      },
+      { label: "calibrate judge", detail: "Before the faithfulness judge is trusted in scoring, it's run against 6 hand-labeled (claim, context, verdict) triples — 100% agreement is earned here, not assumed." },
+      { label: "aggregate + gate", detail: "Per-metric scores roll up into a scorecard, then checked against a configurable pass-rate floor." },
+      { label: "persist results", detail: "Runs, traces, and scores are written to SQLite via SQLAlchemy so history survives past a single invocation." },
+      { label: "regression check", detail: "Each new run is diffed against the most recent prior run for the same agent, per metric, to catch silent quality drops." },
+      { label: "dashboard render", detail: "A Streamlit dashboard reads the same SQLite tables read-only across four tabs — no recomputation, pure viewer." },
+      { label: "ci gate", detail: "GitHub Actions runs the gate with deterministic scorers only (no API key needed) against a cached rolling baseline, failing the build on any regression." },
+    ],
   },
   {
     key: "research-assistant",
@@ -140,14 +187,27 @@ export const PROJECTS: Project[] = [
     challenges:
       "Getting the reflection loop to actually improve output — not loop forever or rubber-stamp — required capping it at 2 revision cycles with forced approval after that: an explicit tradeoff between quality and runaway latency/cost.",
     latency: {
-      total: "23.8s end-to-end",
+      total: "155.97s end-to-end (one revision cycle triggered)",
       segments: [
-        { label: "Researcher 8.42s", seconds: 8.42, color: "var(--chart-1)" },
-        { label: "Analyst 5.31s", seconds: 5.31, color: "var(--chart-2)" },
-        { label: "Writer 6.17s", seconds: 6.17, color: "var(--chart-3)" },
-        { label: "Critic 3.89s", seconds: 3.89, color: "var(--chart-4)" },
+        { label: "Researcher 21.0s", seconds: 21.01, color: "var(--chart-1)" },
+        { label: "Analyst 22.4s", seconds: 22.42, color: "var(--chart-2)" },
+        { label: "Writer 22.2s", seconds: 22.18, color: "var(--chart-3)" },
+        { label: "Critic 23.3s", seconds: 23.25, color: "var(--chart-4)" },
+        { label: "Analyst · revision 29.7s", seconds: 29.72, color: "var(--chart-2)" },
+        { label: "Writer · revision 23.4s", seconds: 23.43, color: "var(--chart-3)" },
+        { label: "Critic · revision 14.0s", seconds: 13.95, color: "var(--chart-4)" },
       ],
     },
+    pipeline: [
+      { label: "researcher", detail: "Gemini generates 3 search queries, then Tavily web search and the ArXiv API are called per query and merged/deduped into raw sources." },
+      { label: "analyst", detail: "Turns raw sources into structured findings, contradictions, and trends — and re-incorporates the critic's feedback on revision passes." },
+      { label: "writer", detail: "Expands the analyst's structured notes into the full cited draft — executive summary, findings, conclusion, references." },
+      {
+        label: "critic",
+        status: "flagged",
+        detail: "Scores the draft against a 5-point checklist; if it fails, feedback routes back to the analyst for another pass, capped at 2 revisions (env-configurable) before force-approval.",
+      },
+    ],
   },
   {
     key: "finance-llm",
@@ -169,6 +229,37 @@ export const PROJECTS: Project[] = [
       "Mistral-7B-Instruct fine-tuned on localized Indian personal-finance topics (SIPs, PPF, EPF, ELSS, HRA, ITR, CIBIL) so it reasons correctly about India-specific financial products a general model wouldn't know well.",
     stack: ["Mistral-7B-Instruct", "QLoRA (4-bit NF4, bitsandbytes)", "PEFT/LoRA", "MLflow (wired, not yet populated)", "Gradio"],
     why: "Wanted to go through a full fine-tuning cycle end-to-end, not just call an API — including the memory-constrained reality of training a 7B model on consumer hardware.",
+    pipeline: [
+      { label: "data curation", detail: "200 hand-authored India-specific instruction/response pairs (SIP, PPF, EPF, ELSS, HRA, ITR, CIBIL) — the actual training source on disk." },
+      {
+        label: "dataset merge",
+        status: "planned",
+        detail: "A script can pull in and dedupe FinQA + Finance-Alpaca from Hugging Face alongside the custom pairs — needs an input file that isn't in the repo, so it's never actually been run.",
+      },
+      { label: "alpaca format", detail: "Raw Q&A JSON is converted into the Instruction/Response template and written to train.jsonl." },
+      { label: "4-bit qlora load", detail: "Mistral-7B-Instruct-v0.2 loads via 4-bit NF4 quantization with LoRA adapters injected into the attention and MLP layers." },
+      {
+        label: "train r=16",
+        status: "active",
+        detail:
+          "The only rank actually trained — 3 epochs, loss 1.7174 → 0.9824 → 0.6772 per the real checkpoint's trainer_state.json. MLflow logging is wired in, but that run happened on Colab's ephemeral disk, so this repo's local tracking DB has nothing logged yet.",
+      },
+      {
+        label: "rank ablate r=8/32",
+        status: "planned",
+        detail: "Training presets for both ranks are fully wired and ready to run in the same script — just not run yet.",
+      },
+      {
+        label: "benchmark eval",
+        status: "planned",
+        detail: "A 50-prompt keyword-coverage script comparing base vs. adapter is complete, but no results file exists yet.",
+      },
+      {
+        label: "merge + deploy",
+        status: "planned",
+        detail: "Merges the adapter into the base model and can push to the Hugging Face Hub — blocked on the ablation and benchmark actually running first.",
+      },
+    ],
     challenges:
       "Built out a systematic 3-way LoRA rank ablation (r=8/16/32) with MLflow tracking and a 50-prompt keyword-coverage benchmark script — but only r=16 has actually been trained and graded so far (loss 1.72 → 0.68 on Colab's ephemeral filesystem, so MLflow has no logged runs yet either). Deliberately not quoting an ablation or benchmark number here until r=8, r=32, and the eval script have actually been run — a planned pipeline isn't a result.",
   },
@@ -201,6 +292,28 @@ export const PROJECTS: Project[] = [
       "pytest (offline fake providers)",
     ],
     why: "Most RAG demos assume the first retrieval is good enough and just generate from it. Wanted to build the failure-handling path explicitly — grade, retry, widen, verify, give up honestly — instead of quietly hallucinating past a bad retrieval.",
+    pipeline: [
+      { label: "dense search", detail: "Vector search over the embedded index returns the top semantic candidates, run as one half of a combined retrieve step." },
+      { label: "bm25 search", detail: "A parallel BM25 keyword search runs alongside dense search over the same widened candidate pool." },
+      { label: "rrf fuse", detail: "Reciprocal rank fusion (k=60) merges the two ranked lists into one before reranking." },
+      { label: "rerank", detail: "A cross-encoder reranks the fused candidates for precision, if enabled." },
+      {
+        label: "grade relevance",
+        status: "flagged",
+        detail:
+          "Length-sensitive grading bug found & fixed — Jaccard similarity divided by the union of query+passage words, diluting on long passages; swapped for query-coverage, which divides by the query's word count only.",
+      },
+      { label: "rewrite query", detail: "If nothing graded relevant and the rewrite budget isn't exhausted, the query is rewritten and retrieval runs again." },
+      { label: "widen window", detail: "Once rewrites are exhausted, the retrieval window doubles and retrieval runs again before giving up." },
+      { label: "generate", detail: "Once any passage grades relevant (or recovery is exhausted), the LLM drafts an answer from what's available." },
+      { label: "verify", detail: "The generated answer is checked against the retrieved text it's supposed to be grounded in, with a caveat appended if unverified." },
+      { label: "give up honestly", detail: "If rewrite and widen are both exhausted and nothing relevant turned up, a fixed \"not enough context\" message returns instead of a hallucinated answer." },
+      {
+        label: "self-heal rechunk",
+        detail:
+          "A separate background job polls which documents keep grading low-relevance across queries and automatically re-chunks them smaller once a threshold is crossed — no manual re-ingestion required.",
+      },
+    ],
     challenges:
       "The offline test suite's fake relevance grader used Jaccard similarity, which got diluted on realistic multi-sentence chunks — a passage that clearly contained the answer was scoring as 'irrelevant' just because the chunk had more unrelated words than the query had matching ones. Switched to a query-coverage metric (what fraction of the query's own words appear in the passage) instead, which isn't sensitive to passage length. Also found the healing job would crash re-chunking to a smaller size than the configured overlap — caught both by actually running the system end-to-end against a live server instead of trusting the test suite alone.",
     debugTrace: {
@@ -232,6 +345,20 @@ export const PROJECTS: Project[] = [
       "A dashboard that aggregates AI/ML news from company blogs, arXiv, and Hacker News, filters and summarizes it with an LLM, and flags items touching my own stack (LangGraph, Qdrant, Gemini, Mistral) as high relevance.",
     stack: ["Next.js (App Router)", "Prisma + Postgres (Neon)", "LLM summarization", "Vercel Cron", "RSS feed", "SEO: sitemap + OG image"],
     why: "Wanted a personal, filtered news feed instead of scrolling five different sources every morning — and to practice a scheduled, cost-conscious LLM pipeline instead of one that calls the API on every request.",
+    pipeline: [
+      { label: "fetch feeds", detail: "Pulls RSS from company blogs and arXiv (cs.CL/cs.LG/cs.MA), plus Hacker News via the Algolia API, filtered to the last 48 hours — triggered by a daily Vercel Cron hit." },
+      { label: "clean titles", detail: "Strips LaTeX math delimiters and backslash commands from arXiv titles so raw $...$ and \\Sigma-style text doesn't leak into the UI." },
+      { label: "dedupe", detail: "Normalizes and drops repeat titles, since the same story often shows up across RSS, arXiv, and Hacker News." },
+      {
+        label: "keyword pre-filter",
+        status: "flagged",
+        detail: "A hardcoded keyword check runs before the LLM call so irrelevant items never get sent for summarization — keeps monthly spend to a few cents.",
+      },
+      { label: "summarize + flag", detail: "One LLM call both drops anything still irrelevant and, per item, writes a summary, assigns a category, and flags high relevance for anything touching my own stack." },
+      { label: "persist", detail: "Checks for an existing row by URL before inserting, so the same story never gets summarized — or billed — twice across days." },
+      { label: "dashboard render", detail: "Today's digest and the dated archive pages query Postgres directly and render server-side." },
+      { label: "seo + feeds", detail: "A sitemap, a dynamic OG image, an RSS feed, and robots rules are all generated straight from the same digest data at request time." },
+    ],
     challenges:
       "Added a cheap keyword pre-filter before the LLM summarization call specifically to avoid paying to summarize irrelevant articles — brought the monthly LLM spend down to a few cents.",
   },

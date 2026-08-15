@@ -7,7 +7,7 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 interface ProjectCardProps {
   project: Project;
-  onOpen: (key: string) => void;
+  onOpen: (key: string, stage?: number) => void;
 }
 
 export default function ProjectCard({ project, onOpen }: ProjectCardProps) {
@@ -109,6 +109,29 @@ export default function ProjectCard({ project, onOpen }: ProjectCardProps) {
                 <i style={{ background: seg.color }} />
                 {seg.label}
               </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {project.pipeline && (
+        <div className="pipeline-trace">
+          <div className="lbl">Pipeline stages · click a stage for why</div>
+          <div className="pipeline-track" style={{ gridTemplateColumns: `repeat(${project.pipeline.length}, 1fr)` }}>
+            <span className="pipeline-line" aria-hidden="true" />
+            {project.pipeline.map((stage, i) => (
+              <button
+                key={stage.label}
+                type="button"
+                className={`pipeline-stage ${stage.status ?? ""}`}
+                title={`${stage.label} — ${stage.detail}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpen(project.key, i);
+                }}
+              >
+                <span className="pnode" />
+              </button>
             ))}
           </div>
         </div>

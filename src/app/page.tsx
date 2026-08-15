@@ -16,6 +16,17 @@ import ProjectModal from "@/components/ProjectModal";
 export default function Home() {
   const [booted, setBooted] = useState(false);
   const [openProject, setOpenProject] = useState<string | null>(null);
+  const [openStage, setOpenStage] = useState<number | undefined>(undefined);
+
+  function handleOpen(key: string, stage?: number) {
+    setOpenProject(key);
+    setOpenStage(stage);
+  }
+
+  function handleClose() {
+    setOpenProject(null);
+    setOpenStage(undefined);
+  }
 
   return (
     <div className={`page ${booted ? "revealed" : "pre-reveal"}`}>
@@ -27,7 +38,7 @@ export default function Home() {
         <div className="wrap">
           <Hero ready={booted} />
           <QueryBar />
-          <TestCases onOpen={setOpenProject} />
+          <TestCases onOpen={handleOpen} />
           <IncidentLog />
           <SkillCoverage />
           <RunSummary />
@@ -35,7 +46,7 @@ export default function Home() {
         </div>
       </div>
 
-      <ProjectModal projectKey={openProject} onClose={() => setOpenProject(null)} />
+      <ProjectModal projectKey={openProject} initialStage={openStage} onClose={handleClose} />
     </div>
   );
 }

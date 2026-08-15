@@ -1,29 +1,38 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { PROJECTS } from "@/lib/data";
 
 interface ProjectModalProps {
   projectKey: string | null;
+  initialStage?: number;
   onClose: () => void;
 }
 
-export default function ProjectModal({ projectKey, onClose }: ProjectModalProps) {
+export default function ProjectModal({ projectKey, initialStage, onClose }: ProjectModalProps) {
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
   const lastFocused = useRef<HTMLElement | null>(null);
   const project = PROJECTS.find((p) => p.key === projectKey) ?? null;
+  const [selectedStage, setSelectedStage] = useState(0);
 
   useEffect(() => {
     if (project) {
       lastFocused.current = document.activeElement as HTMLElement;
       document.body.style.overflow = "hidden";
       closeBtnRef.current?.focus({ preventScroll: true });
+      if (initialStage !== undefined) {
+        setSelectedStage(initialStage);
+      } else {
+        const flagged = project.pipeline?.findIndex((s) => s.status === "flagged" || s.status === "active") ?? -1;
+        setSelectedStage(flagged >= 0 ? flagged : 0);
+      }
     } else {
       document.body.style.overflow = "";
       lastFocused.current?.focus({ preventScroll: true });
     }
-  }, [project]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project, initialStage]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -70,6 +79,34 @@ export default function ProjectModal({ projectKey, onClose }: ProjectModalProps)
                 <div className="mlabel">{"// overview"}</div>
                 <p>{project.overview}</p>
               </div>
+              {project.pipeline && (
+                <div className="modal-section">
+                  <div className="mlabel">{"// pipeline — click a stage"}</div>
+                  <div
+                    className="pipeline-track large"
+                    style={{ gridTemplateColumns: `repeat(${project.pipeline.length}, 1fr)` }}
+                  >
+                    <span className="pipeline-line" aria-hidden="true" />
+                    {project.pipeline.map((stage, i) => (
+                      <button
+                        key={stage.label}
+                        type="button"
+                        className={`pipeline-stage ${stage.status ?? ""} ${selectedStage === i ? "selected" : ""}`}
+                        aria-pressed={selectedStage === i}
+                        onClick={() => setSelectedStage(i)}
+                      >
+                        <span className="pnode" />
+                        <span className="plabel">{stage.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {project.pipeline[selectedStage] && (
+                    <div className={`pipeline-detail ${project.pipeline[selectedStage].status ?? ""}`}>
+                      <b>{project.pipeline[selectedStage].label}</b> — {project.pipeline[selectedStage].detail}
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="modal-section">
                 <div className="mlabel">{"// stack"}</div>
                 <div className="modal-stack">
