@@ -10,7 +10,7 @@ export default function TestCases({ onOpen }: TestCasesProps) {
     <section className="cases" id="cases">
       <div className="section-title">
         <h2>Test Cases</h2>
-        <span>{PROJECTS.length} of 12 projects · click a card for the full case</span>
+        <span>{PROJECTS.length} of 13 projects · click a card for the full case</span>
       </div>
       <div className="case-grid">
         {PROJECTS.map((p) => (

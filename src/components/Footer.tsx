@@ -9,7 +9,7 @@ export default function Footer() {
             <b>[run complete]</b> {PROJECTS.length}/{PROJECTS.length} test cases passed inspection
           </div>
           <div>
-            <b>[note]</b> full case list (12) available on request
+            <b>[note]</b> full case list (13) available on request
           </div>
         </div>
         <div className="contact-links">

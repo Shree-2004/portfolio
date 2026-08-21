@@ -210,58 +210,42 @@ export const PROJECTS: Project[] = [
     ],
   },
   {
-    key: "finance-llm",
-    tcId: "TC-04",
-    tag: "fine-tuning / QLoRA",
-    title: "Domain Fine-Tuned Finance LLM",
-    verdict: "build",
-    verdictLabel: "in progress",
-    desc: "Mistral-7B-Instruct fine-tuned on Indian personal-finance data via 4-bit QLoRA on a Colab T4 — training loss 1.72 → 0.68 over 3 epochs. Rank ablation, keyword-coverage benchmark, and HF Hub deployment are scaffolded but not yet run.",
+    key: "ai-news",
+    tcId: "TC-05",
+    tag: "dashboard / scheduled LLM",
+    title: "AI News Fetcher",
+    verdict: "live",
+    verdictLabel: "live",
+    desc: "Aggregates AI/ML news from company blogs, arXiv, and Hacker News, filters and summarizes it with an LLM, and flags items touching my own stack (LangGraph, Qdrant, Gemini) as high relevance.",
     stats: [
-      { value: "4×", label: "memory reduction" },
-      { value: "1.72 → 0.68", label: "training loss" },
-      { value: "r=16", label: "only rank trained so far" },
+      { value: "Daily", label: "cron digest" },
+      { value: "Next.js", label: "app router" },
+      { value: "SEO", label: "sitemap + OG built-in" },
     ],
     links: [
-      { label: "source", href: "https://github.com/Shree-2004/Finance-llm" },
+      { label: "live demo", href: "https://ai-news-hub-tawny.vercel.app" },
+      { label: "source", href: "https://github.com/Shree-2004/ai-news-hub" },
     ],
     overview:
-      "Mistral-7B-Instruct fine-tuned on localized Indian personal-finance topics (SIPs, PPF, EPF, ELSS, HRA, ITR, CIBIL) so it reasons correctly about India-specific financial products a general model wouldn't know well.",
-    stack: ["Mistral-7B-Instruct", "QLoRA (4-bit NF4, bitsandbytes)", "PEFT/LoRA", "MLflow (wired, not yet populated)", "Gradio"],
-    why: "Wanted to go through a full fine-tuning cycle end-to-end, not just call an API — including the memory-constrained reality of training a 7B model on consumer hardware.",
+      "A dashboard that aggregates AI/ML news from company blogs, arXiv, and Hacker News, filters and summarizes it with an LLM, and flags items touching my own stack (LangGraph, Qdrant, Gemini, Mistral) as high relevance.",
+    stack: ["Next.js (App Router)", "Prisma + Postgres (Neon)", "LLM summarization", "Vercel Cron", "RSS feed", "SEO: sitemap + OG image"],
+    why: "Wanted a personal, filtered news feed instead of scrolling five different sources every morning — and to practice a scheduled, cost-conscious LLM pipeline instead of one that calls the API on every request.",
     pipeline: [
-      { label: "data curation", detail: "200 hand-authored India-specific instruction/response pairs (SIP, PPF, EPF, ELSS, HRA, ITR, CIBIL) — the actual training source on disk." },
+      { label: "fetch feeds", detail: "Pulls RSS from company blogs and arXiv (cs.CL/cs.LG/cs.MA), plus Hacker News via the Algolia API, filtered to the last 48 hours — triggered by a daily Vercel Cron hit." },
+      { label: "clean titles", detail: "Strips LaTeX math delimiters and backslash commands from arXiv titles so raw $...$ and \\Sigma-style text doesn't leak into the UI." },
+      { label: "dedupe", detail: "Normalizes and drops repeat titles, since the same story often shows up across RSS, arXiv, and Hacker News." },
       {
-        label: "dataset merge",
-        status: "planned",
-        detail: "A script can pull in and dedupe FinQA + Finance-Alpaca from Hugging Face alongside the custom pairs — needs an input file that isn't in the repo, so it's never actually been run.",
+        label: "keyword pre-filter",
+        status: "flagged",
+        detail: "A hardcoded keyword check runs before the LLM call so irrelevant items never get sent for summarization — keeps monthly spend to a few cents.",
       },
-      { label: "alpaca format", detail: "Raw Q&A JSON is converted into the Instruction/Response template and written to train.jsonl." },
-      { label: "4-bit qlora load", detail: "Mistral-7B-Instruct-v0.2 loads via 4-bit NF4 quantization with LoRA adapters injected into the attention and MLP layers." },
-      {
-        label: "train r=16",
-        status: "active",
-        detail:
-          "The only rank actually trained — 3 epochs, loss 1.7174 → 0.9824 → 0.6772 per the real checkpoint's trainer_state.json. MLflow logging is wired in, but that run happened on Colab's ephemeral disk, so this repo's local tracking DB has nothing logged yet.",
-      },
-      {
-        label: "rank ablate r=8/32",
-        status: "planned",
-        detail: "Training presets for both ranks are fully wired and ready to run in the same script — just not run yet.",
-      },
-      {
-        label: "benchmark eval",
-        status: "planned",
-        detail: "A 50-prompt keyword-coverage script comparing base vs. adapter is complete, but no results file exists yet.",
-      },
-      {
-        label: "merge + deploy",
-        status: "planned",
-        detail: "Merges the adapter into the base model and can push to the Hugging Face Hub — blocked on the ablation and benchmark actually running first.",
-      },
+      { label: "summarize + flag", detail: "One LLM call both drops anything still irrelevant and, per item, writes a summary, assigns a category, and flags high relevance for anything touching my own stack." },
+      { label: "persist", detail: "Checks for an existing row by URL before inserting, so the same story never gets summarized — or billed — twice across days." },
+      { label: "dashboard render", detail: "Today's digest and the dated archive pages query Postgres directly and render server-side." },
+      { label: "seo + feeds", detail: "A sitemap, a dynamic OG image, an RSS feed, and robots rules are all generated straight from the same digest data at request time." },
     ],
     challenges:
-      "Built out a systematic 3-way LoRA rank ablation (r=8/16/32) with MLflow tracking and a 50-prompt keyword-coverage benchmark script — but only r=16 has actually been trained and graded so far (loss 1.72 → 0.68 on Colab's ephemeral filesystem, so MLflow has no logged runs yet either). Deliberately not quoting an ablation or benchmark number here until r=8, r=32, and the eval script have actually been run — a planned pipeline isn't a result.",
+      "Added a cheap keyword pre-filter before the LLM summarization call specifically to avoid paying to summarize irrelevant articles — brought the monthly LLM spend down to a few cents.",
   },
   {
     key: "self-healing-rag",
@@ -325,42 +309,106 @@ export const PROJECTS: Project[] = [
     },
   },
   {
-    key: "ai-news",
-    tcId: "TC-05",
-    tag: "dashboard / scheduled LLM",
-    title: "AI News Fetcher",
-    verdict: "live",
-    verdictLabel: "live",
-    desc: "Aggregates AI/ML news from company blogs, arXiv, and Hacker News, filters and summarizes it with an LLM, and flags items touching my own stack (LangGraph, Qdrant, Gemini) as high relevance.",
+    key: "finance-llm",
+    tcId: "TC-04",
+    tag: "fine-tuning / QLoRA",
+    title: "Domain Fine-Tuned Finance LLM",
+    verdict: "build",
+    verdictLabel: "in progress",
+    desc: "Mistral-7B-Instruct fine-tuned on Indian personal-finance data via 4-bit QLoRA on a Colab T4 — training loss 1.72 → 0.68 over 3 epochs. Rank ablation, keyword-coverage benchmark, and HF Hub deployment are scaffolded but not yet run.",
     stats: [
-      { value: "Daily", label: "cron digest" },
-      { value: "Next.js", label: "app router" },
-      { value: "SEO", label: "sitemap + OG built-in" },
+      { value: "4×", label: "memory reduction" },
+      { value: "1.72 → 0.68", label: "training loss" },
+      { value: "r=16", label: "only rank trained so far" },
     ],
     links: [
-      { label: "live demo", href: "https://ai-news-hub-tawny.vercel.app" },
-      { label: "source", href: "https://github.com/Shree-2004/ai-news-hub" },
+      { label: "source", href: "https://github.com/Shree-2004/Finance-llm" },
     ],
     overview:
-      "A dashboard that aggregates AI/ML news from company blogs, arXiv, and Hacker News, filters and summarizes it with an LLM, and flags items touching my own stack (LangGraph, Qdrant, Gemini, Mistral) as high relevance.",
-    stack: ["Next.js (App Router)", "Prisma + Postgres (Neon)", "LLM summarization", "Vercel Cron", "RSS feed", "SEO: sitemap + OG image"],
-    why: "Wanted a personal, filtered news feed instead of scrolling five different sources every morning — and to practice a scheduled, cost-conscious LLM pipeline instead of one that calls the API on every request.",
+      "Mistral-7B-Instruct fine-tuned on localized Indian personal-finance topics (SIPs, PPF, EPF, ELSS, HRA, ITR, CIBIL) so it reasons correctly about India-specific financial products a general model wouldn't know well.",
+    stack: ["Mistral-7B-Instruct", "QLoRA (4-bit NF4, bitsandbytes)", "PEFT/LoRA", "MLflow (wired, not yet populated)", "Gradio"],
+    why: "Wanted to go through a full fine-tuning cycle end-to-end, not just call an API — including the memory-constrained reality of training a 7B model on consumer hardware.",
     pipeline: [
-      { label: "fetch feeds", detail: "Pulls RSS from company blogs and arXiv (cs.CL/cs.LG/cs.MA), plus Hacker News via the Algolia API, filtered to the last 48 hours — triggered by a daily Vercel Cron hit." },
-      { label: "clean titles", detail: "Strips LaTeX math delimiters and backslash commands from arXiv titles so raw $...$ and \\Sigma-style text doesn't leak into the UI." },
-      { label: "dedupe", detail: "Normalizes and drops repeat titles, since the same story often shows up across RSS, arXiv, and Hacker News." },
+      { label: "data curation", detail: "200 hand-authored India-specific instruction/response pairs (SIP, PPF, EPF, ELSS, HRA, ITR, CIBIL) — the actual training source on disk." },
       {
-        label: "keyword pre-filter",
-        status: "flagged",
-        detail: "A hardcoded keyword check runs before the LLM call so irrelevant items never get sent for summarization — keeps monthly spend to a few cents.",
+        label: "dataset merge",
+        status: "planned",
+        detail: "A script can pull in and dedupe FinQA + Finance-Alpaca from Hugging Face alongside the custom pairs — needs an input file that isn't in the repo, so it's never actually been run.",
       },
-      { label: "summarize + flag", detail: "One LLM call both drops anything still irrelevant and, per item, writes a summary, assigns a category, and flags high relevance for anything touching my own stack." },
-      { label: "persist", detail: "Checks for an existing row by URL before inserting, so the same story never gets summarized — or billed — twice across days." },
-      { label: "dashboard render", detail: "Today's digest and the dated archive pages query Postgres directly and render server-side." },
-      { label: "seo + feeds", detail: "A sitemap, a dynamic OG image, an RSS feed, and robots rules are all generated straight from the same digest data at request time." },
+      { label: "alpaca format", detail: "Raw Q&A JSON is converted into the Instruction/Response template and written to train.jsonl." },
+      { label: "4-bit qlora load", detail: "Mistral-7B-Instruct-v0.2 loads via 4-bit NF4 quantization with LoRA adapters injected into the attention and MLP layers." },
+      {
+        label: "train r=16",
+        status: "active",
+        detail:
+          "The only rank actually trained — 3 epochs, loss 1.7174 → 0.9824 → 0.6772 per the real checkpoint's trainer_state.json. MLflow logging is wired in, but that run happened on Colab's ephemeral disk, so this repo's local tracking DB has nothing logged yet.",
+      },
+      {
+        label: "rank ablate r=8/32",
+        status: "planned",
+        detail: "Training presets for both ranks are fully wired and ready to run in the same script — just not run yet.",
+      },
+      {
+        label: "benchmark eval",
+        status: "planned",
+        detail: "A 50-prompt keyword-coverage script comparing base vs. adapter is complete, but no results file exists yet.",
+      },
+      {
+        label: "merge + deploy",
+        status: "planned",
+        detail: "Merges the adapter into the base model and can push to the Hugging Face Hub — blocked on the ablation and benchmark actually running first.",
+      },
     ],
     challenges:
-      "Added a cheap keyword pre-filter before the LLM summarization call specifically to avoid paying to summarize irrelevant articles — brought the monthly LLM spend down to a few cents.",
+      "Built out a systematic 3-way LoRA rank ablation (r=8/16/32) with MLflow tracking and a 50-prompt keyword-coverage benchmark script — but only r=16 has actually been trained and graded so far (loss 1.72 → 0.68 on Colab's ephemeral filesystem, so MLflow has no logged runs yet either). Deliberately not quoting an ablation or benchmark number here until r=8, r=32, and the eval script have actually been run — a planned pipeline isn't a result.",
+  },
+  {
+    key: "agentlens",
+    tcId: "TC-07",
+    tag: "agent debugging / eval",
+    title: "AgentLens",
+    verdict: "build",
+    verdictLabel: "in progress",
+    desc: "Diagnoses which step in a multi-step agent trajectory a failure actually traces back to, using deterministic rule checks plus an LLM judge — validated against a 10-trace hand-labeled benchmark, then stress-tested against a live, unscripted run of a separate real agent.",
+    stats: [
+      { value: "89%", label: "benchmark accuracy (40/45)" },
+      { value: "0", label: "false positives" },
+      { value: "10", label: "ground-truth traces" },
+    ],
+    links: [
+      { label: "source", href: "https://github.com/Shree-2004/agentlens" },
+    ],
+    overview:
+      "Most agent evals score the final output. AgentLens instead tries to find the exact step a multi-step agent's trajectory actually went wrong at — the upstream cause, not just the downstream symptom — using fast deterministic checks (tool-call loops, silently swallowed errors) plus an LLM judge for subtler cases, like a fact that goes stale or gets contradicted several steps before the final answer is visibly wrong.",
+    stack: [
+      "Python",
+      "Anthropic + Gemini (multi-provider judge)",
+      "Structured JSON verdict schema",
+      "Rule-based static checks",
+      "Hand-labeled ground-truth benchmark",
+      "HTML/JS timeline viewer",
+    ],
+    why: "An eval that only grades the final answer can't tell a genuinely correct diagnosis from a fluent, convincing-sounding wrong one. Wanted a tool that's honest about that distinction in its own output, not just plausible-sounding — and, after building a synthetic ground-truth benchmark, wanted to know if it actually held up against a trace nobody designed for it to catch.",
+    challenges:
+      "Built a 10-trace hand-labeled benchmark (8 failure types + 2 clean traces) and got the judge to 89% accuracy with zero false positives. But every one of those traces was hand-authored — built to contain (or not contain) a failure. So I pointed it at a live, unscripted run of a separate real multi-agent project instead, with no pre-known answer, and it missed a genuine contradiction 5/5 times. Root cause and fix below. Still open: confirming the fix doesn't regress the original benchmark across all 10 traces (partial re-check done, no regressions found so far) and capturing more real traces to see how far it generalizes.",
+    debugTrace: {
+      title: "// root cause: judge missed a real, unscripted contradiction",
+      body: "The judge was tuned to compare facts sitting in clean, structured tool_result fields. A real contradiction from a live run — one agent stating a fact, another agent's review two steps later stating the opposite — was buried in two ~10,000-character prose blocks instead, and went uncaught across 5 straight runs and two prompt-only fix attempts.",
+      before: "5/5 runs missed the contradiction, even after rewording the prompt to ask for it explicitly",
+      after: "Caught cleanly once claim-extraction became a required field in the judge's output schema, not just an instruction it could silently skip",
+      note: "Found by testing against a live run of a separate real agent project, not a trace built for the tool to catch — the entire reason that test existed.",
+    },
+    pipeline: [
+      { label: "trace ingest", detail: "A trace is a task description plus an ordered list of steps (reasoning / tool_call / tool_result / final_answer) — close enough to OTel's GenAI semantic conventions that real logs could be adapted in later." },
+      { label: "rule checks", detail: "No LLM call: flags tool-call loops (same tool+args 3+ times), tool errors silently treated as success, and missing tool arguments." },
+      {
+        label: "llm judge",
+        status: "flagged",
+        detail: "Reads the full trajectory in one pass and must extract concrete, checkable claims per step into a required output field before it's allowed to conclude anything — the fix that closed the real-trace miss above.",
+      },
+      { label: "merge", detail: "Combines rule and judge findings, preferring the earliest high-confidence one — the upstream root cause matters more than a downstream symptom of the same failure." },
+      { label: "timeline viewer", detail: "Renders the diagnosis as a timeline that visually breaks at the critical step, so a 15-step trajectory's failure point is visible at a glance." },
+    ],
   },
 ];
 
@@ -407,6 +455,13 @@ export const INCIDENTS = [
     body: "A deprecated Gemini model string was still hardcoded in two projects, silently at risk of breaking on the next API deprecation cycle.",
     status: "fixed" as const,
   },
+  {
+    id: "INC-06",
+    title: "Judge missed a real, unscripted contradiction",
+    source: "AgentLens",
+    body: "Tuned to spot contradictions in structured tool results, the LLM judge missed one buried in ~10,000 characters of prose from a live agent run, 5 times in a row — fixed by requiring claim extraction as an output field instead of an instruction.",
+    status: "fixed" as const,
+  },
 ];
 
 export const SKILLS = [
@@ -422,8 +477,8 @@ export const SKILLS = [
 ];
 
 export const RUN_SUMMARY = [
-  { target: 12, suffix: "", label: "projects shipped" },
+  { target: 13, suffix: "", label: "projects shipped" },
   { target: 2, suffix: "", label: "live public demos" },
-  { target: 5, suffix: "", label: "bugs caught pre-launch" },
+  { target: 6, suffix: "", label: "bugs caught pre-launch" },
   { target: 95.6, suffix: "%", label: "best keyword accuracy" },
 ];
