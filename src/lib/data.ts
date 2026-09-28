@@ -370,12 +370,12 @@ export const PROJECTS: Project[] = [
     tcId: "TC-07",
     tag: "agent debugging / eval",
     title: "AgentLens",
-    verdict: "build",
-    verdictLabel: "in progress",
-    desc: "Diagnoses which step in a multi-step agent trajectory a failure actually traces back to, using deterministic rule checks plus an LLM judge — validated against a 10-trace hand-labeled benchmark, then stress-tested against a live, unscripted run of a separate real agent.",
+    verdict: "bench",
+    verdictLabel: "benchmarked",
+    desc: "Diagnoses which step in a multi-step agent trajectory a failure actually traces back to, using deterministic rule checks plus an LLM judge — validated against a 10-trace hand-labeled benchmark on two judge models, then stress-tested against a live, unscripted run of a separate real agent.",
     stats: [
-      { value: "89%", label: "benchmark accuracy (40/45)" },
-      { value: "0", label: "false positives" },
+      { value: "0", label: "false positives (2 judge models)" },
+      { value: "80%", label: "accuracy, full Groq run (24/30)" },
       { value: "10", label: "ground-truth traces" },
     ],
     links: [
@@ -385,7 +385,7 @@ export const PROJECTS: Project[] = [
       "Most agent evals score the final output. AgentLens instead tries to find the exact step a multi-step agent's trajectory actually went wrong at — the upstream cause, not just the downstream symptom — using fast deterministic checks (tool-call loops, silently swallowed errors) plus an LLM judge for subtler cases, like a fact that goes stale or gets contradicted several steps before the final answer is visibly wrong.",
     stack: [
       "Python",
-      "Anthropic + Gemini (multi-provider judge)",
+      "Groq + Gemini + Anthropic (multi-provider judge)",
       "Structured JSON verdict schema",
       "Rule-based static checks",
       "Hand-labeled ground-truth benchmark",
@@ -393,10 +393,10 @@ export const PROJECTS: Project[] = [
     ],
     why: "An eval that only grades the final answer can't tell a genuinely correct diagnosis from a fluent, convincing-sounding wrong one. Wanted a tool that's honest about that distinction in its own output, not just plausible-sounding — and, after building a synthetic ground-truth benchmark, wanted to know if it actually held up against a trace nobody designed for it to catch.",
     challenges:
-      "Built a 10-trace hand-labeled benchmark (8 failure types + 2 clean traces) and got the judge to 89% accuracy with zero false positives. But every one of those traces was hand-authored — built to contain (or not contain) a failure. So I pointed it at a live, unscripted run of a separate real multi-agent project instead, with no pre-known answer, and it missed a genuine contradiction 5/5 times. Root cause and fix below. Still open: confirming the fix doesn't regress the original benchmark across all 10 traces (partial re-check done, no regressions found so far) and capturing more real traces to see how far it generalizes.",
+      "Built a 10-trace hand-labeled benchmark (8 failure types + 2 clean traces). Every one of those traces was hand-authored, so I pointed the judge at a live, unscripted run of a separate real multi-agent project — and it missed a genuine contradiction 5/5 times. Root cause and fix below. A complete 30-run pass on a second judge model (Groq gpt-oss-120b) then scored 80% with zero false positives, and reading the judge's own reasoning showed why the misses clustered: it could see two claims disagree, but not an unsupported choice between options or a caveat dropped from a value. A third pass for those reached 30/30 — but it was developed against this same benchmark, so it's partly in-sample; the clean re-run with test-set examples removed from the prompt gave 11/12, and the real-trace catch still held. Still open: traces nobody here has seen.",
     debugTrace: {
       title: "// root cause: judge missed a real, unscripted contradiction",
-      body: "The judge was tuned to compare facts sitting in clean, structured tool_result fields. A real contradiction from a live run — one agent stating a fact, another agent's review two steps later stating the opposite — was buried in two ~10,000-character prose blocks instead, and went uncaught across 5 straight runs and two prompt-only fix attempts.",
+      body: "The judge was tuned to compare facts sitting in clean, structured tool_result fields. A real contradiction from a live run — one agent stating a fact, another agent's review two steps later stating the opposite — was buried in two ~10,000-character prose blocks instead, and went uncaught across 5 straight runs — 3 on the original prompt, 2 after a prompt-only fix.",
       before: "5/5 runs missed the contradiction, even after rewording the prompt to ask for it explicitly",
       after: "Caught cleanly once claim-extraction became a required field in the judge's output schema, not just an instruction it could silently skip",
       note: "Found by testing against a live run of a separate real agent project, not a trace built for the tool to catch — the entire reason that test existed.",
@@ -407,7 +407,7 @@ export const PROJECTS: Project[] = [
       {
         label: "llm judge",
         status: "flagged",
-        detail: "Reads the full trajectory in one pass and must extract concrete, checkable claims per step into a required output field before it's allowed to conclude anything — the fix that closed the real-trace miss above.",
+        detail: "One call, three passes: extract every concrete claim per step into a required output field, compare claims for contradictions, then check for unsupported commitments and dropped caveats. Making extraction a required field, not an instruction, is the fix that closed the real-trace miss above.",
       },
       { label: "merge", detail: "Combines rule and judge findings, preferring the earliest high-confidence one — the upstream root cause matters more than a downstream symptom of the same failure." },
       { label: "timeline viewer", detail: "Renders the diagnosis as a timeline that visually breaks at the critical step, so a 15-step trajectory's failure point is visible at a glance." },
@@ -418,7 +418,7 @@ export const PROJECTS: Project[] = [
 export const SCORECARD = [
   { label: "Grounding rate (SEBI/BSE RAG)", target: 91.1, suffix: "%" },
   { label: "Judge agreement (AgentSentinel)", target: 100, suffix: "%" },
-  { label: "Reflection-loop quality score", target: 87, suffix: "%" },
+  { label: "Citation precision (Research Assistant)", target: 87.5, suffix: "%" },
   { label: "Citation coverage", target: 97.8, suffix: "%" },
 ];
 
