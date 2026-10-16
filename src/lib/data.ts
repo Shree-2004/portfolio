@@ -54,65 +54,65 @@ export const PROJECTS: Project[] = [
   {
     key: "sebi-rag",
     tcId: "TC-01",
-    tag: "retrieval / production",
+    tag: "retrieval / live",
     title: "SEBI/BSE Filing RAG Analyzer",
-    verdict: "bench",
-    verdictLabel: "benchmarked",
-    desc: "Hybrid dense + BM25 retrieval over real Indian financial filings (Reliance, TCS, Infosys), with cross-encoder reranking and a post-generation grounding check that flags answers below a confidence threshold.",
+    verdict: "live",
+    verdictLabel: "live",
+    desc: "Cited Q&A over real Indian financial filings for 9 listed companies: hybrid dense + BM25 retrieval with reranking, a tool-calling agent for comparisons and growth questions, and a verifier that traces every figure in an answer back to its source table cell.",
     stats: [
-      { value: "95.6%", label: "keyword acc." },
-      { value: "3,637", label: "chunks (from 31.4k)" },
-      { value: "4.0", label: "citations/answer" },
+      { value: "85.7%", label: "strict accuracy" },
+      { value: "13/13", label: "comparisons (agent)" },
+      { value: "9", label: "companies" },
     ],
     links: [
+      { label: "live demo", href: "https://sebi-bse-financial-filing-rag-analy.vercel.app" },
+      { label: "api docs", href: "https://finfiling-rag-api.onrender.com/docs" },
       { label: "source", href: "https://github.com/Shree-2004/SEBI-BSE-Financial-Filing-RAG-Analyzer" },
     ],
     overview:
-      "A retrieval-augmented system that answers questions about real Indian financial filings (Reliance FY2025, TCS Q3FY25, Infosys Q1FY27) with exact per-page citations, combining dense embeddings with BM25 keyword search so both semantic questions and exact table lookups work.",
+      "A retrieval-augmented system over real SEBI/BSE filings: Reliance's FY2025 annual report, TCS Q3FY25, and Q1FY27 results for Infosys, HDFC Bank, ITC, Bharti Airtel, Sun Pharma, L&T and Maruti Suzuki. Single-figure questions go through hybrid retrieval with per-page citations; comparison, growth and ratio questions go to a tool-calling agent that looks figures up in an extracted metrics table and computes with a calculator tool, so it never does arithmetic or unit conversion (₹ crore vs ₹ million) in its head. Company and period are detected from the question. Deployed as a Docker API on Render's free tier plus a React frontend on Vercel.",
     stack: [
-      "pdfplumber + Tesseract OCR",
-      "BAAI/bge-base-en-v1.5",
-      "BM25 hybrid retrieval",
-      "CrossEncoder reranking",
+      "Docling + RapidOCR",
+      "BAAI/bge-base-en-v1.5 (ONNX int8)",
+      "BM25 hybrid + RRF",
+      "CrossEncoder rerank (ONNX int8)",
       "Qdrant Cloud",
+      "Groq gpt-oss-120b tool calling",
+      "SQLite metrics table",
       "FastAPI",
       "React/Vite",
       "Docker",
-      "Railway + Vercel",
+      "Render + Vercel",
+      "GitHub Actions CI",
     ],
-    why: "Wanted to prove RAG could hold up on messy real financial documents — dense tables, OCR'd scans — instead of clean blog-post text, and validate it against a hand-labeled gold question set rather than trusting it “felt” accurate.",
+    why: "Wanted to prove RAG could hold up on messy real financial documents — dense tables, scanned pages, standalone and consolidated statements side by side — and measure it against hand-verified answers instead of trusting that it “felt” accurate.",
     challenges:
-      "The chunker had a silent sliding-window bug generating near-duplicate chunks (31,477 total). Root-caused it to a step-size error, fixed it, and added a regression test pinning chunk counts per fixture page — a good lesson in never trusting chunk counts without eyeballing samples. Also flagged an unresolved production risk: the embedding model's ~510MB memory footprint exceeds a typical 512MB free-tier ceiling.",
-    confidence: { label: "Grounding confidence", tier: "High", value: 91.1 },
+      "The eval I first reported (95.6%) counted an answer correct if any expected keyword appeared, and most keyword lists repeated words from the question. Re-scored strictly, the answer had to contain the right figure: 28.9%. The cause was the PDF table parser splitting numbers across columns. Switching to Docling and adding a context line to every chunk (company, period, standalone/consolidated, page) took the original 45 questions to 86.7%, and 85.7% across 63 questions on 9 companies, same model throughout. The old grounding check passed 0% of wrong figures in a mutation test; the cell-level verifier that replaced it catches 85%. Deploying to a 512 MB free tier: PyTorch alone peaked near 1 GB, so the API now runs the same models on ONNX Runtime at int8 with the index re-embedded to match — retrieval 58/63 vs 57/63 before, peak 472 MiB in a memory-capped container. Still open: the 85.7% was measured just before that switch (retrieval and the agent questions were re-checked after, a full re-run wasn't), 6 of 63 questions still miss at retrieval, and the free tier takes ~15–20 s per answer.",
+    confidence: { label: "Strict answer accuracy", tier: "High", value: 85.7 },
     pipeline: [
-      { label: "ocr parse", detail: "pdfplumber extracts native text and tables per page; Tesseract OCR only kicks in when a page has under 20 characters of extractable text." },
       {
-        label: "chunk",
+        label: "parse",
         status: "flagged",
         detail:
-          "Sliding-window bug found & fixed here — the window-advance loop degenerated into single-token increments near section ends, re-emitting near-duplicates. 31.4k → 3.6k chunks, with a regression test now pinning counts per fixture page.",
+          "Docling's layout + table-structure models rebuild each table with its row labels and dated column headers; RapidOCR handles scanned filings. Replaced pdfplumber, which split numbers across columns (TCS's 63,973 was indexed as “93”) — the bug a lenient metric had hidden.",
       },
-      { label: "dense embed", detail: "BAAI/bge-base-en-v1.5 encodes each chunk into a normalized 768-dim vector, with a separate retrieval prefix applied to queries at search time." },
-      { label: "vector upsert", detail: "Embeddings and chunk metadata are batched into a Qdrant collection — the persisted dense index the retriever searches against." },
-      { label: "bm25 index", detail: "Chunk text is tokenized (keeping characters like . % / so \"Q2FY25\" and \"4.3%\" survive) and built into a pickled rank_bm25 index, independent of the vector store." },
-      { label: "dense search", detail: "Qdrant cosine search over the vector index returns the top semantic candidates for a query." },
-      { label: "bm25 search", detail: "A parallel keyword search over the BM25 index returns the top exact-match candidates — dense search alone missed exact numbers and table lookups." },
-      { label: "rrf fuse", detail: "Reciprocal rank fusion merges the two ranked lists by rank rather than raw score, since BM25 and cosine scores aren't on comparable scales." },
-      { label: "rerank", detail: "A cross-encoder (ms-marco-MiniLM-L-6-v2) re-scores the fused candidates jointly against the query for precision before anything reaches the LLM." },
-      { label: "generate", detail: "Groq's Llama-3.3-70B drafts a citation-instructed answer from the top chunks, falling back to gpt-4o-mini if Groq rate-limits or goes down." },
-      {
-        label: "ground-check",
-        detail:
-          "Regex-extracts every figure, term, and period from the answer and checks each against the retrieved chunks, attaching a confidence score — it flags weak grounding below a 0.5 threshold, it doesn't hard-block the answer.",
-      },
-      { label: "cite", detail: "A separate pass matches company + period mentions in the answer text back to source chunks to build the structured per-page citation list." },
+      { label: "chunk", detail: "Large tables are split into row groups that repeat the caption and header; every chunk gets a context line (company | period | standalone/consolidated | page) so retrieval can tell sibling tables apart." },
+      { label: "embed", detail: "bge-base-en-v1.5 on ONNX Runtime, int8 (per-channel, MatMul-only). The Qdrant index is embedded with the same int8 model, so queries and chunks share one vector space." },
+      { label: "metrics table", detail: "Key figures (revenue, PBT, net profit, EPS…) extracted from every table into SQLite with period read from each column's date. Lookups vote across copies and return “ambiguous” rather than guess — 46/48 hand-verified figures correct, 0 wrong." },
+      { label: "detect filters", detail: "Company and period are parsed from the question (tickers, aliases, Indian fiscal-year dates); a period that isn't indexed gets a clear message instead of an answer from the wrong quarter." },
+      { label: "route", detail: "A plain rule, no extra LLM call: comparison, growth or ratio wording (or 2+ companies) goes to the agent, everything else to retrieval." },
+      { label: "hybrid search", detail: "Qdrant dense search and BM25 keyword search run in parallel and are merged with reciprocal rank fusion, since their raw scores aren't comparable." },
+      { label: "rerank", detail: "ms-marco-MiniLM CrossEncoder (ONNX int8) re-scores the top 10, two pairs at a time — scoring all 10 at once spiked memory past the 512 MB limit." },
+      { label: "generate", detail: "gpt-oss-120b on Groq writes a cited answer from the top chunks — or, on the agent path, calls lookup_metric / calculate / search_filing until it has every figure." },
+      { label: "verify", detail: "Each number in the answer must match a source cell with the right row, period column and standalone/consolidated basis, and at least one must come from the row the question asks about. Agent answers are checked against the tool outputs, with one retry if a figure didn't come from a tool." },
+      { label: "cite", detail: "Each figure is returned with its company, period and page." },
     ],
     debugTrace: {
-      title: "// root cause: sliding-window chunker bug",
-      body: "Loop condition let the window advance by less than one full step on certain page layouts, re-emitting near-duplicate chunks for the same source text.",
-      before: "31,477 chunks",
-      after: "3,637 chunks",
-      note: "Worst case: one page produced 64 chunks before the fix, 4 after. Fixed the step logic and added a regression test pinning chunk count per fixture page.",
+      title: "// root cause: table parser split numbers, and a lenient metric hid it",
+      body: "pdfplumber put column boundaries through the middle of numbers, so TCS's revenue of 63,973 was indexed as “93”. The keyword-based eval still scored 95.6%, because answers repeated words from the question.",
+      before: "28.9% strict accuracy",
+      after: "86.7% on the same 45 questions",
+      note: "Docling parser + contextual chunk headers, same LLM. Every gold answer was re-verified against the PDF — two of the original labels were wrong and were fixed.",
     },
   },
   {
@@ -416,10 +416,10 @@ export const PROJECTS: Project[] = [
 ];
 
 export const SCORECARD = [
-  { label: "Grounding rate (SEBI/BSE RAG)", target: 91.1, suffix: "%" },
+  { label: "Strict answer accuracy (SEBI/BSE RAG)", target: 85.7, suffix: "%" },
   { label: "Judge agreement (AgentSentinel)", target: 100, suffix: "%" },
   { label: "Citation precision (Research Assistant)", target: 87.5, suffix: "%" },
-  { label: "Citation coverage", target: 97.8, suffix: "%" },
+  { label: "Wrong figures caught (SEBI/BSE verifier)", target: 85, suffix: "%" },
 ];
 
 export const INCIDENTS = [
@@ -465,6 +465,13 @@ export const INCIDENTS = [
     body: "Tuned to spot contradictions in structured tool results, the LLM judge missed one buried in ~10,000 characters of prose from a live agent run, 5 times in a row — fixed by requiring claim extraction as an output field instead of an instruction.",
     status: "fixed" as const,
   },
+  {
+    id: "INC-07",
+    title: "Eval reported 95.6% on answers with the wrong numbers",
+    source: "SEBI/BSE Filing RAG",
+    body: "The metric counted an answer correct if any expected keyword appeared — and keyword lists repeated words from the question. Strict scoring showed 28.9%, traced to a table parser splitting numbers across columns; now 85.7% on hand-verified answers.",
+    status: "fixed" as const,
+  },
 ];
 
 export const SKILLS = [
@@ -481,7 +488,7 @@ export const SKILLS = [
 
 export const RUN_SUMMARY = [
   { target: 13, suffix: "", label: "projects shipped" },
-  { target: 2, suffix: "", label: "live public demos" },
-  { target: 6, suffix: "", label: "bugs caught pre-launch" },
-  { target: 95.6, suffix: "%", label: "best keyword accuracy" },
+  { target: 3, suffix: "", label: "live public demos" },
+  { target: 7, suffix: "", label: "bugs caught pre-launch" },
+  { target: 85.7, suffix: "%", label: "strict RAG accuracy" },
 ];
