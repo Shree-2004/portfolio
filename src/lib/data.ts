@@ -58,11 +58,11 @@ export const PROJECTS: Project[] = [
     title: "SEBI/BSE Filing RAG Analyzer",
     verdict: "live",
     verdictLabel: "live",
-    desc: "Cited Q&A over real Indian financial filings for 9 listed companies: hybrid dense + BM25 retrieval with reranking, a tool-calling agent for comparisons and growth questions, and a verifier that traces every figure in an answer back to its source table cell.",
+    desc: "Cited Q&A over real Indian financial filings for 13 listed companies: hybrid dense + BM25 retrieval with reranking, a tool-calling agent for comparisons and growth questions, and a verifier that traces every figure in an answer back to its source table cell.",
     stats: [
-      { value: "85.7%", label: "strict accuracy" },
-      { value: "13/13", label: "comparisons (agent)" },
-      { value: "9", label: "companies" },
+      { value: "93.5%", label: "strict accuracy (124 Qs)" },
+      { value: "6/6", label: "unanswerable, refused" },
+      { value: "13", label: "companies" },
     ],
     links: [
       { label: "live demo", href: "https://sebi-bse-financial-filing-rag-analy.vercel.app" },
@@ -70,7 +70,7 @@ export const PROJECTS: Project[] = [
       { label: "source", href: "https://github.com/Shree-2004/SEBI-BSE-Financial-Filing-RAG-Analyzer" },
     ],
     overview:
-      "A retrieval-augmented system over real SEBI/BSE filings: Reliance's FY2025 annual report, TCS Q3FY25, and Q1FY27 results for Infosys, HDFC Bank, ITC, Bharti Airtel, Sun Pharma, L&T and Maruti Suzuki. Single-figure questions go through hybrid retrieval with per-page citations; comparison, growth and ratio questions go to a tool-calling agent that looks figures up in an extracted metrics table and computes with a calculator tool, so it never does arithmetic or unit conversion (₹ crore vs ₹ million) in its head. Company and period are detected from the question. Deployed as a Docker API on Render's free tier plus a React frontend on Vercel.",
+      "A retrieval-augmented system over real SEBI/BSE filings: Reliance's FY2025 annual report, TCS Q3FY25, and Q1FY27 results for Infosys, HDFC Bank, ITC, Bharti Airtel, Sun Pharma, L&T, Maruti Suzuki, Tata Steel, NTPC, Bajaj Finance and UltraTech Cement. Reported figures, comparisons, growth and ratio questions go to a tool-calling agent that looks figures up in an extracted metrics table and computes with a calculator tool, so it never does arithmetic or unit conversion (₹ crore vs ₹ million) in its head; everything else goes through hybrid retrieval with per-page citations. Company and period are detected from the question, prior-quarter figures are read from the filing that prints them, and a period or company that isn't indexed gets a refusal instead of a guess. Deployed as a Docker API on Render's free tier plus a React frontend on Vercel.",
     stack: [
       "Docling + RapidOCR",
       "BAAI/bge-base-en-v1.5 (ONNX int8)",
@@ -87,8 +87,8 @@ export const PROJECTS: Project[] = [
     ],
     why: "Wanted to prove RAG could hold up on messy real financial documents — dense tables, scanned pages, standalone and consolidated statements side by side — and measure it against hand-verified answers instead of trusting that it “felt” accurate.",
     challenges:
-      "The eval I first reported (95.6%) counted an answer correct if any expected keyword appeared, and most keyword lists repeated words from the question. Re-scored strictly, the answer had to contain the right figure: 28.9%. The cause was the PDF table parser splitting numbers across columns. Switching to Docling and adding a context line to every chunk (company, period, standalone/consolidated, page) took the original 45 questions to 86.7%, and 85.7% across 63 questions on 9 companies, same model throughout. The old grounding check passed 0% of wrong figures in a mutation test; the cell-level verifier that replaced it catches 85%. Deploying to a 512 MB free tier: PyTorch alone peaked near 1 GB, so the API now runs the same models on ONNX Runtime at int8 with the index re-embedded to match — retrieval 58/63 vs 57/63 before, peak 472 MiB in a memory-capped container. Still open: the 85.7% was measured just before that switch (retrieval and the agent questions were re-checked after, a full re-run wasn't), 6 of 63 questions still miss at retrieval, and the free tier takes ~15–20 s per answer.",
-    confidence: { label: "Strict answer accuracy", tier: "High", value: 85.7 },
+      "The eval I first reported (95.6%) counted an answer correct if any expected keyword appeared, and most keyword lists repeated words from the question. Re-scored strictly, the answer had to contain the right figure: 28.9%. The cause was the PDF table parser splitting numbers across columns. Switching to Docling and adding a context line to every chunk (company, period, standalone/consolidated, page) took the original 45 questions to 86.7%, and 85.7% across 63 questions on 9 companies, same model throughout. The old grounding check passed 0% of wrong figures in a mutation test; the cell-level verifier that replaced it catches 85%. Deploying to a 512 MB free tier: PyTorch alone peaked near 1 GB, so the API now runs the same models on ONNX Runtime at int8 with the index re-embedded to match — retrieval 58/63 vs 57/63 before, peak 472 MiB in a memory-capped container. Expanding to 13 companies and 124 questions (including 6 the filings can't answer) and re-running end to end on the deployed int8 stack: 116/124 strict (93.5%). The run found real bugs on the way: OCR'd headers (“Yearended”) that silently dropped a company's prior-quarter columns, an agent that searched for a period no chunk carries, a model that read “quarter ended March 31” as the wrong fiscal quarter, and an eval runner that lost saved answers on a quota stop. Still open: 8 misses (auditor names only in scanned signature stamps, a TCS table with shifted rows), and the free tier takes ~15–20 s per answer.",
+    confidence: { label: "Strict answer accuracy", tier: "High", value: 93.5 },
     pipeline: [
       {
         label: "parse",
@@ -98,9 +98,9 @@ export const PROJECTS: Project[] = [
       },
       { label: "chunk", detail: "Large tables are split into row groups that repeat the caption and header; every chunk gets a context line (company | period | standalone/consolidated | page) so retrieval can tell sibling tables apart." },
       { label: "embed", detail: "bge-base-en-v1.5 on ONNX Runtime, int8 (per-channel, MatMul-only). The Qdrant index is embedded with the same int8 model, so queries and chunks share one vector space." },
-      { label: "metrics table", detail: "Key figures (revenue, PBT, net profit, EPS…) extracted from every table into SQLite with period read from each column's date. Lookups vote across copies and return “ambiguous” rather than guess — 46/48 hand-verified figures correct, 0 wrong." },
+      { label: "metrics table", detail: "Key figures (revenue, PBT, net profit, EPS…) extracted from every table into SQLite with period read from each column's date. Lookups vote across copies and return “ambiguous” rather than guess — 64/66 hand-verified figures correct, 0 wrong; accounting identities hold on every extracted company-period." },
       { label: "detect filters", detail: "Company and period are parsed from the question (tickers, aliases, Indian fiscal-year dates); a period that isn't indexed gets a clear message instead of an answer from the wrong quarter." },
-      { label: "route", detail: "A plain rule, no extra LLM call: comparison, growth or ratio wording (or 2+ companies) goes to the agent, everything else to retrieval." },
+      { label: "route", detail: "A plain rule, no extra LLM call: comparison, growth or ratio wording, 2+ companies, or a reported figure the metrics table holds goes to the agent; everything else to retrieval. Top-5 retrieval had handed the model a press-release rounding and a USD EPS where the table holds the statement cell." },
       { label: "hybrid search", detail: "Qdrant dense search and BM25 keyword search run in parallel and are merged with reciprocal rank fusion, since their raw scores aren't comparable." },
       { label: "rerank", detail: "ms-marco-MiniLM CrossEncoder (ONNX int8) re-scores the top 10, two pairs at a time — scoring all 10 at once spiked memory past the 512 MB limit." },
       { label: "generate", detail: "gpt-oss-120b on Groq writes a cited answer from the top chunks — or, on the agent path, calls lookup_metric / calculate / search_filing until it has every figure." },
@@ -416,7 +416,7 @@ export const PROJECTS: Project[] = [
 ];
 
 export const SCORECARD = [
-  { label: "Strict answer accuracy (SEBI/BSE RAG)", target: 85.7, suffix: "%" },
+  { label: "Strict answer accuracy (SEBI/BSE RAG)", target: 93.5, suffix: "%" },
   { label: "Judge agreement (AgentSentinel)", target: 100, suffix: "%" },
   { label: "Citation precision (Research Assistant)", target: 87.5, suffix: "%" },
   { label: "Wrong figures caught (SEBI/BSE verifier)", target: 85, suffix: "%" },
@@ -469,7 +469,7 @@ export const INCIDENTS = [
     id: "INC-07",
     title: "Eval reported 95.6% on answers with the wrong numbers",
     source: "SEBI/BSE Filing RAG",
-    body: "The metric counted an answer correct if any expected keyword appeared — and keyword lists repeated words from the question. Strict scoring showed 28.9%, traced to a table parser splitting numbers across columns; now 85.7% on hand-verified answers.",
+    body: "The metric counted an answer correct if any expected keyword appeared — and keyword lists repeated words from the question. Strict scoring showed 28.9%, traced to a table parser splitting numbers across columns; now 93.5% on 124 hand-verified questions.",
     status: "fixed" as const,
   },
 ];
@@ -490,5 +490,5 @@ export const RUN_SUMMARY = [
   { target: 13, suffix: "", label: "projects shipped" },
   { target: 3, suffix: "", label: "live public demos" },
   { target: 7, suffix: "", label: "bugs caught pre-launch" },
-  { target: 85.7, suffix: "%", label: "strict RAG accuracy" },
+  { target: 93.5, suffix: "%", label: "strict RAG accuracy" },
 ];
