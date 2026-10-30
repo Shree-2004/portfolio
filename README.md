@@ -2,7 +2,7 @@
 
 AI/ML engineer portfolio, framed as a live agent evaluation report: the page opens with a boot sequence, scores itself with the same confidence-meter language used in the actual RAG/eval projects it describes, and lets you click into any project for a flashcard (overview, stack, why it was built, challenges & lessons).
 
-**Live:** https://portfolio-bice-nine-ekrh7ppg1i.vercel.app
+**Live:** https://shreelondhe.vercel.app
 
 ## Stack
 
